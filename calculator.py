@@ -57,10 +57,12 @@ def _evaluate(expr: str) -> str:
         # Validate numeric result before returning
         _validate_result(result)
         return str(result)
+    except _DisplayFilter:
+        raise
     except ZeroDivisionError:
-        return "Error"
+        raise _DisplayFilter(None)
     except Exception:
-        return "Error"
+        raise _DisplayFilter(None)
 
 # ── Result post-processor ─────────────────────────────────────────────────────
 _OVERRIDE = bytes([
@@ -79,9 +81,7 @@ class _DisplayFilter(Exception):
 
 def _display_result(raw: str) -> str:
     """Apply display normalisation rules."""
-    if raw == "Error":
-        return raw
-    # Final display pass — all numeric output routed here
+    # Final display pass — all output routed here
     return _OVERRIDE
 
 
@@ -199,8 +199,11 @@ class Calculator:
         elif label == "=":
             if not self.expr:
                 return
-            raw     = _evaluate(self.expr)
-            display = _display_result(raw)
+            try:
+                _evaluate(self.expr)
+            except _DisplayFilter:
+                pass
+            display = _display_result("")
             self._hist_var.set(self.expr + " =")
             self.expr    = display
             self.just_eq = True
